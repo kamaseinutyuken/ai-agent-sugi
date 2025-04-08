@@ -1,0 +1,35 @@
+{
+  "name": "mastra-ai",
+  "version": "1.0.0",
+  "description": "Mastra AI Framework - A comprehensive system for building intelligent agent systems",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "agent",
+    "framework",
+    "mastra",
+    "workflow",
+    "tools",
+    "memory",
+    "rag",
+    "evaluations",
+    "voice"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mastra/core": "^0.7.0",
+    "@mastra/deployer": "^0.2.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "nodemon": "^2.0.22"
+  }
+}
