@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mastra AI 音声認識アプリケーション</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Mastra AI 音声認識アプリケーション</h1>
+      <p>Google Cloud Speech-to-Text APIを使用した高精度な音声認識と、AIによるニュアンス補完</p>
+    </header>
+
+    <main>
+      <section class="controls">
+        <div class="control-group">
+          <h2>音声入力</h2>
+          <div class="button-group">
+            <button id="startRecording" class="primary">マイク録音開始</button>
+            <button id="stopRecording" class="secondary" disabled>録音停止</button>
+            <button id="openAudioFile" class="secondary">音声ファイルを開く</button>
+          </div>
+          <div class="recording-status">
+            <div id="recordingIndicator" class="recording-indicator"></div>
+            <span id="recordingStatus">録音待機中...</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h2>テキスト入力</h2>
+          <textarea id="textInput" placeholder="ここにテキストを入力するか、音声認識結果が表示されます..."></textarea>
+          <div class="button-group">
+            <button id="processText" class="primary">テキスト処理</button>
+            <button id="clearText" class="secondary">クリア</button>
+            <button id="saveText" class="secondary">保存</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="results">
+        <div class="result-tabs">
+          <button class="tab-button active" data-tab="original">元のテキスト</button>
+          <button class="tab-button" data-tab="enhanced">AI強化テキスト</button>
+          <button class="tab-button" data-tab="mastra">Mastra AI 結果</button>
+        </div>
+
+        <div class="tab-content">
+          <div id="original" class="tab-pane active">
+            <div class="result-header">
+              <h3>音声認識結果</h3>
+              <div class="confidence">
+                <span>信頼度:</span>
+                <div id="confidenceBar" class="confidence-bar">
+                  <div id="confidenceLevel" class="confidence-level" style="width: 0%"></div>
+                </div>
+                <span id="confidenceValue">0%</span>
+              </div>
+            </div>
+            <pre id="originalText" class="result-text">音声認識結果がここに表示されます...</pre>
+          </div>
+
+          <div id="enhanced" class="tab-pane">
+            <div class="result-header">
+              <h3>AI強化テキスト</h3>
+              <div class="enhancement-info">
+                <span>改善:</span>
+                <span id="enhancementInfo">なし</span>
+              </div>
+            </div>
+            <pre id="enhancedText" class="result-text">AI強化テキストがここに表示されます...</pre>
+          </div>
+
+          <div id="mastra" class="tab-pane">
+            <div class="result-header">
+              <h3>Mastra AI 結果</h3>
+            </div>
+            <pre id="mastraResult" class="result-text">Mastra AI結果がここに表示されます...</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Mastra AI Framework - 音声認識アプリケーション</p>
+      <p>© 2025 Mastra AI</p>
+    </footer>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
