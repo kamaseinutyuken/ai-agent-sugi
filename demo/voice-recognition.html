@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mastra AI - Voice Recognition Demo</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .transcript {
+      min-height: 100px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+    
+    .interim {
+      color: #666;
+      font-style: italic;
+    }
+    
+    .enhanced {
+      background-color: #f8f9fa;
+      border-left: 4px solid #4CAF50;
+      padding-left: 15px;
+    }
+    
+    .error {
+      color: #f44336;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mastra AI - 音声認識デモ</h1>
+  
+  <div class="container">
+    <div class="card">
+      <h2>マイク入力</h2>
+      <div class="controls">
+        <button id="startBtn">録音開始</button>
+        <button id="stopBtn" disabled>録音停止</button>
+      </div>
+      <div class="status" id="status">待機中...</div>
+      <div>
+        <h3>認識結果:</h3>
+        <div class="transcript" id="transcript"></div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>AI補完結果</h2>
+      <div class="enhanced" id="enhanced">
+        <p>音声を認識すると、AIによって補完された結果がここに表示されます。</p>
+      </div>
+    </div>
+  </div>
+  
+  <script src="../dist/mastra.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const status = document.getElementById('status');
+      const transcript = document.getElementById('transcript');
+      const enhanced = document.getElementById('enhanced');
+      
+      let recognitionController = null;
+      
+      // Create a mock AI provider for demo purposes
+      const mockAiProvider = {
+        call: async (params) => {
+          // Simulate API call delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Extract the original text from the prompt
+          const originalText = params.prompt.match(/音声認識テキスト: "(.+)"/)[1];
+          
+          // Simple enhancement: fix common speech recognition errors and add punctuation
+          let enhancedText = originalText
+            .replace(/えー/g, '')
+            .replace(/あの/g, '')
+            .replace(/えっと/g, '')
+            .replace(/ですね/g, 'です')
+            .trim();
+          
+          // Add periods if missing
+          if (!enhancedText.endsWith('。') && !enhancedText.endsWith('.')) {
+            enhancedText += '。';
+          }
+          
+          return {
+            text: enhancedText
+          };
+        }
+      };
+      
+      // Create Mastra Voice instance
+      const voice = Mastra.Voice.createVoice({
+        language: 'ja-JP',
+        continuous: true,
+        interimResults: true,
+        aiProvider: mockAiProvider
+      });
+      
+      // Start listening
+      startBtn.addEventListener('click', () => {
+        status.textContent = '録音中...';
+        transcript.innerHTML = '';
+        enhanced.innerHTML = '';
+        
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        
+        recognitionController = voice.startListening(
+          { language: 'ja-JP' },
+          async (result) => {
+            // Update transcript
+            let html = '';
+            
+            if (result.finalTranscript) {
+              html += `<div>${result.finalTranscript}</div>`;
+            }
+            
+            if (result.interimTranscript) {
+              html += `<div class="interim">${result.interimTranscript}</div>`;
+            }
+            
+            transcript.innerHTML = html;
+            
+            // Update enhanced text if available
+            if (result.enhanced) {
+              enhanced.innerHTML = `<p>${result.enhanced}</p>`;
+            }
+          },
+          (error) => {
+            status.innerHTML = `<span class="error">エラー: ${error.message}</span>`;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+          }
+        );
+        
+        if (!recognitionController) {
+          status.innerHTML = '<span class="error">エラー: このブラウザは音声認識をサポートしていません。</span>';
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        }
+      });
+      
+      // Stop listening
+      stopBtn.addEventListener('click', () => {
+        if (recognitionController) {
+          recognitionController.stop();
+          recognitionController = null;
+        }
+        
+        status.textContent = '停止しました';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      });
+    });
+  </script>
+</body>
+</html>
