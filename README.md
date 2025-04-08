@@ -228,10 +228,70 @@ const evaluations = createEvaluations(config);
 #### Voice
 
 ```javascript
-const voice = createVoice(config);
+const voice = createVoice({
+  provider: 'google-cloud',
+  apiKey: 'YOUR_GOOGLE_CLOUD_API_KEY',
+  language: 'ja-JP',
+  aiProvider: customAIProvider
+});
 ```
 
-- `config`: 音声システムの設定
+- `provider`: 音声認識プロバイダー（'browser', 'google-cloud'）
+- `apiKey`: Google Cloud Speech-to-Text APIキー
+- `language`: 音声認識の言語（デフォルト: 'ja-JP'）
+- `aiProvider`: 音声認識結果を強化するためのAIプロバイダー
+- `continuous`: 連続認識モード（ブラウザ音声認識用）
+- `interimResults`: 中間結果を返すかどうか（ブラウザ音声認識用）
+
+##### 音声認識の使用例
+
+```javascript
+// ブラウザでの音声認識
+const voice = createVoice({ language: 'ja-JP' });
+
+const controller = voice.startListening(
+  { language: 'ja-JP' },
+  (result) => {
+    console.log('中間結果:', result.interimTranscript);
+    console.log('最終結果:', result.finalTranscript);
+    
+    if (result.enhanced) {
+      console.log('AI強化結果:', result.enhanced);
+    }
+  },
+  (error) => {
+    console.error('エラー:', error);
+  }
+);
+
+// 10秒後に停止
+setTimeout(() => {
+  controller.stop();
+}, 10000);
+```
+
+##### Google Cloud Speech-to-Text の使用例
+
+```javascript
+const voice = createVoice({
+  provider: 'google-cloud',
+  apiKey: 'YOUR_GOOGLE_CLOUD_API_KEY',
+  language: 'ja-JP'
+});
+
+// 音声ファイルをテキストに変換
+const fs = require('fs');
+const audioFile = fs.readFileSync('audio.wav');
+
+voice.speechToText(audioFile, { language: 'ja-JP' })
+  .then(result => {
+    console.log('認識結果:', result.text);
+    console.log('信頼度:', result.confidence);
+  })
+  .catch(error => {
+    console.error('エラー:', error);
+  });
+```
 
 #### Integrations
 
