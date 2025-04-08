@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastra AI - Voice Recognition Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .transcript-box {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            min-height: 100px;
+            background-color: #f9f9f9;
+        }
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .settings {
+            margin-bottom: 20px;
+        }
+        select, input[type="file"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .mastra-delimiter {
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mastra AI - Voice Recognition Demo</h1>
+    
+    <div class="container">
+        <h2>音声ファイルのアップロード</h2>
+        <form id="upload-form">
+            <div class="settings">
+                <label for="language">言語:</label>
+                <select id="language" name="language">
+                    <option value="ja-JP" selected>日本語 (ja-JP)</option>
+                    <option value="en-US">英語 (en-US)</option>
+                    <option value="zh-CN">中国語 (zh-CN)</option>
+                    <option value="ko-KR">韓国語 (ko-KR)</option>
+                </select>
+                
+                <label for="enhance">AIによる補完:</label>
+                <select id="enhance" name="enhance">
+                    <option value="true" selected>有効</option>
+                    <option value="false">無効</option>
+                </select>
+            </div>
+            
+            <input type="file" id="audio-file" name="audio" accept="audio/*">
+            <button type="submit" id="upload-button">アップロード</button>
+        </form>
+        
+        <div id="status" class="status">音声ファイルを選択してください</div>
+    </div>
+    
+    <div class="container">
+        <h2>認識結果</h2>
+        <div class="transcript-box">
+            <div id="result"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Mastra AI 出力</h2>
+        <div class="mastra-delimiter">◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢</div>
+        <div id="mastra-output"></div>
+        <div class="mastra-delimiter">◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢</div>
+    </div>
+    
+    <div class="container">
+        <h2>テキスト入力</h2>
+        <form id="text-form">
+            <div class="settings">
+                <label for="text-language">言語:</label>
+                <select id="text-language" name="language">
+                    <option value="ja-JP" selected>日本語 (ja-JP)</option>
+                    <option value="en-US">英語 (en-US)</option>
+                    <option value="zh-CN">中国語 (zh-CN)</option>
+                    <option value="ko-KR">韓国語 (ko-KR)</option>
+                </select>
+            </div>
+            
+            <textarea id="text-input" name="text" rows="5" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+            <button type="submit" id="text-button">処理</button>
+        </form>
+        
+        <div id="text-status" class="status">テキストを入力してください</div>
+    </div>
+    
+    <div class="container">
+        <h2>テキスト処理結果</h2>
+        <div class="mastra-delimiter">◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢</div>
+        <div id="text-output"></div>
+        <div class="mastra-delimiter">◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢</div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadForm = document.getElementById('upload-form');
+            const audioFileInput = document.getElementById('audio-file');
+            const uploadButton = document.getElementById('upload-button');
+            const statusElement = document.getElementById('status');
+            const resultElement = document.getElementById('result');
+            const mastraOutputElement = document.getElementById('mastra-output');
+            
+            const textForm = document.getElementById('text-form');
+            const textInput = document.getElementById('text-input');
+            const textButton = document.getElementById('text-button');
+            const textStatusElement = document.getElementById('text-status');
+            const textOutputElement = document.getElementById('text-output');
+            
+            // Handle audio file upload
+            uploadForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                
+                const audioFile = audioFileInput.files[0];
+                if (!audioFile) {
+                    statusElement.textContent = '音声ファイルを選択してください';
+                    return;
+                }
+                
+                // Create a FormData object
+                const formData = new FormData();
+                formData.append('audio', audioFile);
+                formData.append('language', document.getElementById('language').value);
+                formData.append('enhance', document.getElementById('enhance').value);
+                
+                // Disable the upload button
+                uploadButton.disabled = true;
+                statusElement.textContent = '音声ファイルをアップロード中...';
+                
+                try {
+                    // Send the audio file to the server
+                    const response = await fetch('/api/speech-to-text', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    // Parse the response
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Update the result
+                        resultElement.innerHTML = `
+                            <h3>認識結果</h3>
+                            <p><strong>テキスト:</strong> ${data.result.text}</p>
+                            <p><strong>信頼度:</strong> ${Math.round(data.result.confidence * 100)}%</p>
+                            
+                            ${data.result.enhanced ? `
+                                <h3>AI強化結果</h3>
+                                <p><strong>強化テキスト:</strong> ${data.result.enhanced}</p>
+                            ` : ''}
+                            
+                            <h3>メタデータ</h3>
+                            <pre>${JSON.stringify(data.result.metadata, null, 2)}</pre>
+                        `;
+                        
+                        // Update the Mastra AI output
+                        if (data.result.mastra) {
+                            mastraOutputElement.innerHTML = `
+                                <h3>🎯 [抽象化した意図]</h3>
+                                <p><strong>Original Intent:</strong><br>${data.result.mastra.intent.original}</p>
+                                <p><strong>Want or Need Intent:</strong><br>${data.result.mastra.intent.want}</p>
+                                
+                                <h3>🚩 [達成したい目標]</h3>
+                                <ul>
+                                    ${data.result.mastra.goals.map(goal => `<li>${goal}</li>`).join('')}
+                                </ul>
+                                
+                                <h3>📌 [タスク分解]</h3>
+                                ${data.result.mastra.tasks.map((task, index) => `
+                                    <p><strong>[Task ${index + 1}]</strong><br>${task.description}</p>
+                                    <p>${task.steps.join('<br>')}</p>
+                                `).join('')}
+                            `;
+                        }
+                        
+                        // Update the status
+                        statusElement.textContent = '音声認識完了';
+                    } else {
+                        // Update the status
+                        statusElement.textContent = `エラー: ${data.error}`;
+                        resultElement.textContent = '';
+                        mastraOutputElement.textContent = '';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    statusElement.textContent = `エラー: ${error.message}`;
+                    resultElement.textContent = '';
+                    mastraOutputElement.textContent = '';
+                } finally {
+                    // Enable the upload button
+                    uploadButton.disabled = false;
+                }
+            });
+            
+            // Handle text input
+            textForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                
+                const text = textInput.value.trim();
+                if (!text) {
+                    textStatusElement.textContent = 'テキストを入力してください';
+                    return;
+                }
+                
+                // Disable the text button
+                textButton.disabled = true;
+                textStatusElement.textContent = 'テキストを処理中...';
+                
+                try {
+                    // Send the text to the server
+                    const response = await fetch('/api/process-text', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text,
+                            language: document.getElementById('text-language').value
+                        })
+                    });
+                    
+                    // Parse the response
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Update the Mastra AI output
+                        if (data.result) {
+                            textOutputElement.innerHTML = `
+                                <h3>🎯 [抽象化した意図]</h3>
+                                <p><strong>Original Intent:</strong><br>${data.result.intent.original}</p>
+                                <p><strong>Want or Need Intent:</strong><br>${data.result.intent.want}</p>
+                                
+                                <h3>🚩 [達成したい目標]</h3>
+                                <ul>
+                                    ${data.result.goals.map(goal => `<li>${goal}</li>`).join('')}
+                                </ul>
+                                
+                                <h3>📌 [タスク分解]</h3>
+                                ${data.result.tasks.map((task, index) => `
+                                    <p><strong>[Task ${index + 1}]</strong><br>${task.description}</p>
+                                    <p>${task.steps.join('<br>')}</p>
+                                `).join('')}
+                            `;
+                        }
+                        
+                        // Update the status
+                        textStatusElement.textContent = 'テキスト処理完了';
+                    } else {
+                        // Update the status
+                        textStatusElement.textContent = `エラー: ${data.error}`;
+                        textOutputElement.textContent = '';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    textStatusElement.textContent = `エラー: ${error.message}`;
+                    textOutputElement.textContent = '';
+                } finally {
+                    // Enable the text button
+                    textButton.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
