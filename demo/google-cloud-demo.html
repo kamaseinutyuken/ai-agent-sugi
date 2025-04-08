@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastra AI - Google Cloud Speech-to-Text Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .transcript-box {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            min-height: 100px;
+            background-color: #f9f9f9;
+        }
+        .interim {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .final {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .enhanced {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .api-key-container {
+            margin-bottom: 20px;
+        }
+        .api-key-container input {
+            padding: 8px;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .settings {
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .confidence-meter {
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .confidence-value {
+            height: 100%;
+            background-color: #2ecc71;
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+        .mastra-delimiter {
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mastra AI - Google Cloud Speech-to-Text Demo</h1>
+    
+    <div class="container">
+        <h2>設定</h2>
+        <div class="api-key-container">
+            <label for="api-key">Google Cloud API Key:</label>
+            <input type="password" id="api-key" placeholder="Google Cloud API Key を入力してください">
+        </div>
+        
+        <div class="settings">
+            <label for="language">言語:</label>
+            <select id="language">
+                <option value="ja-JP" selected>日本語 (ja-JP)</option>
+                <option value="en-US">英語 (en-US)</option>
+                <option value="zh-CN">中国語 (zh-CN)</option>
+                <option value="ko-KR">韓国語 (ko-KR)</option>
+            </select>
+            
+            <label for="enhance">AIによる補完:</label>
+            <select id="enhance">
+                <option value="true" selected>有効</option>
+                <option value="false">無効</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>音声認識</h2>
+        <button id="start-button">音声認識開始</button>
+        <button id="stop-button" disabled>停止</button>
+        
+        <div class="transcript-box">
+            <div id="interim" class="interim"></div>
+            <div id="final" class="final"></div>
+            <div id="enhanced" class="enhanced"></div>
+        </div>
+        
+        <div class="confidence-meter">
+            <div id="confidence-value" class="confidence-value" style="width: 0%"></div>
+        </div>
+        <div id="confidence-text" class="status">信頼度: 0%</div>
+        
+        <div id="status" class="status">準備完了</div>
+    </div>
+    
+    <div class="container">
+        <h2>Mastra AI 出力</h2>
+        <div class="mastra-delimiter">◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢</div>
+        <div id="mastra-output"></div>
+        <div class="mastra-delimiter">◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢</div>
+    </div>
+    
+    <script src="../dist/mastra.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startButton = document.getElementById('start-button');
+            const stopButton = document.getElementById('stop-button');
+            const interimElement = document.getElementById('interim');
+            const finalElement = document.getElementById('final');
+            const enhancedElement = document.getElementById('enhanced');
+            const statusElement = document.getElementById('status');
+            const confidenceValueElement = document.getElementById('confidence-value');
+            const confidenceTextElement = document.getElementById('confidence-text');
+            const mastraOutputElement = document.getElementById('mastra-output');
+            const apiKeyInput = document.getElementById('api-key');
+            const languageSelect = document.getElementById('language');
+            const enhanceSelect = document.getElementById('enhance');
+            
+            let recognitionController = null;
+            
+            // Mock AI provider for enhancement (in a real app, this would be a real AI service)
+            const mockAiProvider = {
+                call: async (params) => {
+                    console.log('Enhancing transcription with mock AI provider');
+                    
+                    // Extract the original text from the prompt
+                    const match = params.prompt.match(/音声認識テキスト: "(.+)"/);
+                    if (!match) {
+                        return { text: 'Error: Could not extract transcription from prompt' };
+                    }
+                    
+                    const originalText = match[1];
+                    
+                    // Simple enhancement: fix common speech recognition errors and add punctuation
+                    let enhancedText = originalText
+                        .replace(/えー/g, '')
+                        .replace(/あの/g, '')
+                        .replace(/えっと/g, '')
+                        .replace(/ですね/g, 'です')
+                        .trim();
+                    
+                    // Add periods if missing
+                    if (!enhancedText.endsWith('。') && !enhancedText.endsWith('.')) {
+                        enhancedText += '。';
+                    }
+                    
+                    // Simulate a delay for the AI processing
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    return { text: enhancedText };
+                }
+            };
+            
+            // Create a Mastra AI instance
+            const mastraAI = new Mastra.MastraAI();
+            
+            // Create a voice system
+            const createVoiceSystem = () => {
+                const apiKey = apiKeyInput.value;
+                const language = languageSelect.value;
+                const enhance = enhanceSelect.value === 'true';
+                
+                // Create the voice system with the selected options
+                return Mastra.Voice.createVoice({
+                    provider: 'browser', // We're using browser-based recognition in this demo
+                    language,
+                    continuous: true,
+                    interimResults: true,
+                    aiProvider: enhance ? mockAiProvider : null
+                });
+            };
+            
+            // Start listening for speech
+            startButton.addEventListener('click', () => {
+                // Clear previous results
+                interimElement.textContent = '';
+                finalElement.textContent = '';
+                enhancedElement.textContent = '';
+                confidenceValueElement.style.width = '0%';
+                confidenceTextElement.textContent = '信頼度: 0%';
+                
+                // Create a voice system
+                const voice = createVoiceSystem();
+                
+                // Start listening
+                recognitionController = voice.startListening(
+                    { language: languageSelect.value },
+                    (result) => {
+                        // Update the interim transcript
+                        if (result.interimTranscript) {
+                            interimElement.textContent = result.interimTranscript;
+                        }
+                        
+                        // Update the final transcript
+                        if (result.finalTranscript) {
+                            finalElement.textContent = result.finalTranscript;
+                        }
+                        
+                        // Update the enhanced transcript
+                        if (result.enhanced) {
+                            enhancedElement.textContent = result.enhanced;
+                            
+                            // Process the enhanced transcript with Mastra AI
+                            const mastraResult = mastraAI.processInput({
+                                text: result.enhanced,
+                                type: 'voice',
+                                metadata: {
+                                    confidence: result.confidence || 0.9,
+                                    language: languageSelect.value,
+                                    enhanced: true
+                                }
+                            });
+                            
+                            // Update the Mastra AI output
+                            mastraOutputElement.innerHTML = `
+                                <h3>🎯 [抽象化した意図]</h3>
+                                <p><strong>Original Intent:</strong><br>${mastraResult.intent.original}</p>
+                                <p><strong>Want or Need Intent:</strong><br>${mastraResult.intent.want}</p>
+                                
+                                <h3>🚩 [達成したい目標]</h3>
+                                <ul>
+                                    ${mastraResult.goals.map(goal => `<li>${goal}</li>`).join('')}
+                                </ul>
+                                
+                                <h3>📌 [タスク分解]</h3>
+                                ${mastraResult.tasks.map((task, index) => `
+                                    <p><strong>[Task ${index + 1}]</strong><br>${task.description}</p>
+                                    <p>${task.steps.join('<br>')}</p>
+                                `).join('')}
+                            `;
+                        }
+                        
+                        // Update the confidence meter
+                        if (result.confidence) {
+                            const confidencePercent = Math.round(result.confidence * 100);
+                            confidenceValueElement.style.width = `${confidencePercent}%`;
+                            confidenceTextElement.textContent = `信頼度: ${confidencePercent}%`;
+                        }
+                        
+                        // Update the status
+                        statusElement.textContent = '音声認識中...';
+                    },
+                    (error) => {
+                        console.error('Error:', error);
+                        statusElement.textContent = `エラー: ${error.message}`;
+                        
+                        // Re-enable the start button
+                        startButton.disabled = false;
+                        stopButton.disabled = true;
+                    }
+                );
+                
+                if (recognitionController) {
+                    // Disable the start button and enable the stop button
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    
+                    // Update the status
+                    statusElement.textContent = '音声認識中...';
+                } else {
+                    // Update the status
+                    statusElement.textContent = 'お使いのブラウザは音声認識をサポートしていません。';
+                }
+            });
+            
+            // Stop listening
+            stopButton.addEventListener('click', () => {
+                if (recognitionController) {
+                    // Stop the recognition
+                    recognitionController.stop();
+                    recognitionController = null;
+                    
+                    // Enable the start button and disable the stop button
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                    
+                    // Update the status
+                    statusElement.textContent = '音声認識停止';
+                }
+            });
+            
+            // Check if the browser supports speech recognition
+            if (typeof window.SpeechRecognition === 'undefined' && typeof window.webkitSpeechRecognition === 'undefined') {
+                startButton.disabled = true;
+                statusElement.textContent = 'お使いのブラウザは音声認識をサポートしていません。';
+            }
+        });
+    </script>
+</body>
+</html>
