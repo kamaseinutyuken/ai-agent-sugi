@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from app.services.llm_service import LLMService
+from services.llm_service import LLMService
 
 router = APIRouter()
 

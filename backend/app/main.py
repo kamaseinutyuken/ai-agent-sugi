@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from app.routers import chat, excel, vba
+from routers import chat, excel, vba
 
 load_dotenv()
 

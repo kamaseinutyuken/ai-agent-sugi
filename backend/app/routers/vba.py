@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
-from app.services.vba_service import VBAService
+from services.vba_service import VBAService
 
 router = APIRouter()
 

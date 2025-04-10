@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
 import tempfile
 import os
-from app.services.excel_service import ExcelService
+from services.excel_service import ExcelService
 
 router = APIRouter()
 
